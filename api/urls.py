@@ -9,6 +9,7 @@ urlpatterns = [
     path('login/', views.loginPage, name='login'),
     path('pupils/', views.getPupils, name='classroom'),
     path('pupils/<str:pk>', views.getPupil, name='pupil'),
+    path('pupils/report/<str:pk>', views.getPdf, name='pdf'),
     path('pupils/overall/<str:pk>', views.getPupilOverall, name='pupil_overall'),
     path('pupils/result/<str:pk>', views.getPupilResult, name='pupil_result'),
     path('pupils/create/', views.addPupil, name='add-pupil'),

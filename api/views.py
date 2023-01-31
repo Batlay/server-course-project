@@ -1,8 +1,17 @@
 import base64
+import io
 
 from django.contrib.auth.models import User
 from django.core.files.base import ContentFile
+from django.http import HttpResponse, FileResponse
 from django.shortcuts import render
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+from reportlab.pdfgen import canvas
+from reportlab.platypus import Paragraph
 from rest_framework import status
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
@@ -11,7 +20,7 @@ from rest_framework.utils import json
 
 from .models import Note, Post, Teacher, Pupil, Test_Info, ActivityTest, MotivationTest, TemperamentTest, Overall, \
     Criteria, PupilResult, InfoResult
-from .report import make_radar_chart
+from .report import make_radar_chart, bar2, make_radar_chart1, pdf_report, bar1, temperament_circle1
 from .serializers import NoteSerializer, UserSerializer, PostSerializer, PupilSerializer, TestInfoSerializer, \
     Test4Serializer, Test3Serializer, Test2Serializer, ResultSerializer
 from django.contrib.auth import authenticate, login, logout
@@ -142,6 +151,12 @@ def getRoutes(request):
             'body': None,
             'description': 'Test1 answers'
         },
+        {
+            'Endpoint': '/pupils/report/id/',
+            'method': 'GET',
+            'body': None,
+            'description': 'Returns pdf file'
+        },
     ]
 
     return Response(routes)
@@ -259,29 +274,36 @@ def getPupilResult(request, pk):
 def addPupil(request):
     data = request.data
 
-    Pupil.objects.create(
-        fio=data['fio'],
-        phone=data['phone'],
-        email=data['email'],
-    )
+    if Pupil.objects.filter(email=data['email']).exists():
+        content = {'Error': 'Пользователь с таким email уже существует'}
+        return Response(content, status=status.HTTP_409_CONFLICT)
+    elif data['fio'] in [None, ''] or data['phone'] in [None, ''] or data['email'] in [None, '']:
+        content = {'Error': 'Заполните все поля'}
+        return Response(content, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        Pupil.objects.create(
+            fio=data['fio'],
+            phone=data['phone'],
+            email=data['email'],
+        )
 
-    image_data = data['profile_pic']
-    image = ContentFile(base64.b64decode(image_data))
-    file_name = data['fio'] + ".png"
+        image_data = data['profile_pic']
+        image = ContentFile(base64.b64decode(image_data))
+        file_name = data['fio'] + ".png"
 
-    current_user = request.user
-    teacher_details = get_object_or_404(Teacher, user=current_user)
-    classroom = teacher_details.classroom
+        current_user = request.user
+        teacher_details = get_object_or_404(Teacher, user=current_user)
+        classroom = teacher_details.classroom
 
-    pupil = Pupil.objects.get(email=data['email'])
-    user = User.objects.create_user(data['email'], data['email'], data['email'])
-    pupil.classroom = classroom
-    pupil.user = user
-    pupil.save()
-    pupil.profile_pic.save(file_name, image, save=True)
+        pupil = Pupil.objects.get(email=data['email'])
+        user = User.objects.create_user(data['email'], data['email'], data['email'])
+        pupil.classroom = classroom
+        pupil.user = user
+        pupil.save()
+        pupil.profile_pic.save(file_name, image, save=True)
 
-    serializer = PupilSerializer(pupil, many=False)
-    return Response(serializer.data)
+        serializer = PupilSerializer(pupil, many=False)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -503,3 +525,148 @@ def Test1Answers(request):
         overall.save()
 
     return Response()
+
+
+@api_view(['GET'])
+def getPdf(request, pk):
+    pupil = Pupil.objects.get(id=pk)
+    text = "К показателям когнитивно-эмоционального критерия относятся:<br/>– дивергентное мышление;<br/>– легкость в использовании ассоциаций (ассоциативная и экспрессивная беглость);<br/>– особенности темперамента (пластичность, вариативность, эмоциональная устойчивость, склонность к напряженной деятельности, социальная энергичность);<br/>– эмпатия." \
+           "<br/>К показателям личностно-креативного критерия относятся:<br/>– воображение;<br/>– критическое мышление;<br/>– стремление к независимости, отсутствие страха высказывать свою точку зрения на проблему;<br/>– надситуативная активность (инициативность, выход за пределы заданного);<br/>– внутренняя позиция творца (заинтересованность в решении проблемно-поисковых задач, тенденции к индивидуализации творческой деятельности)." \
+           "<br/>Показателями мотивационно-ценностного критерия являются:<br/>– потребность в творческой деятельности;<br/>– потребность в участии в учебно-познавательной деятельности;<br/>– положительное отношение к обучению, школе, учителю, одноклассникам;<br/>– признание ценности творчества." \
+           "<br/>Показателями деятельностно-процессуального критерия являются:" \
+           "<br/>– творческая и познавательная самостоятельность;<br/>– освоение способов творческой деятельности;<br/>– качество выполняемых действий;<br/>– стремление к достижению цели, получению конкретных результатов своей деятельности;<br/>– навыки сотрудничества;<br/>– способность оптимизации своего поведения (навыки организации творческого процесса, гибкий выбор той или иной стратегии поведения, безболезненный отказ от неэффективного способа действия)." \
+           "<br/>К показателям рефлексивного критерия относятся:<br/>– особенности эмоционально-ценностного отношения к себе (уровень самооценки, её адекватность);<br/>– стремление к самообразованию, саморазвитию;<br/>– умение объективно оценить свой и чужой творческий продукт."
+    results = []
+    overall_results = []
+    buffer = io.BytesIO()
+    for i in range(1, 12):
+        try:
+            result = PupilResult.objects.get(pupil=pupil, result_name_id=i).result
+        except PupilResult.DoesNotExist:
+            result = 0
+        results.append(result)
+    for i in range(1, 6):
+        try:
+            overall = Overall.objects.get(pupil=pupil, criteria_id=i).result
+        except Overall.DoesNotExist:
+            overall = 0
+        overall_results.append(overall)
+
+    chart = make_radar_chart1(overall_results)
+
+    b = pdf_report(results)
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'inline;'
+    pdf = canvas.Canvas(buffer, pagesize=A4)
+    pdfmetrics.registerFont(TTFont('TNR', 'times.ttf'))
+    pdf.setFont("TNR", 14)
+    my_Style = ParagraphStyle('style1',
+                              style='style1',
+                              backColor='#F1F1F1',
+                              fontName='TNR',
+                              fontSize=12,
+                              borderColor='#8AFF8A',
+                              borderWidth=1,
+                              borderPadding=(10, 10, 10),
+                              leading=10,
+                              alignment=TA_CENTER
+                              )
+
+    pdf.setTitle(pupil.fio + " | Оценка творческих способностей")
+    pdf.drawImage(pupil.profile_pic.path, x=70, y=600, width=200, height=200, preserveAspectRatio=True, mask='auto')
+    pdf.drawImage(chart, x=300, y=580, width=250, height=250, preserveAspectRatio=True, mask='auto')
+    pdf.drawString(x=180, y=555, text=pupil.classroom.name)
+    pdf.drawString(x=70, y=555, text=pupil.classroom.school.name)
+    pdf.drawString(x=70, y=570, text=pupil.fio)
+    p = Paragraph(text, my_Style)
+    p.wrapOn(pdf, 450, 150)
+    p.drawOn(pdf, x=80, y=150)
+    pdf.showPage()
+    score = 0
+    # for i in results:
+    #     if i == 0:
+    #         score += 1
+    # if score >= 1:
+    #     pdf.setFont("TNR", 14)
+    #     pdf.drawString(x=40, y=780, text="Для получения аналитической статистики необходимо получить все результаты тестов!")
+    #     pdf.save()
+    # else:
+    pdf.setFont("TNR", 14)
+    pdf.drawString(x=70, y=780, text="Уровень притязаний")
+    p1 = Paragraph(b[0], my_Style)
+    p1.wrapOn(pdf, 450, 650)
+    p1.drawOn(pdf, x=80, y=650)
+
+    pdf.drawString(x=70, y=600, text="Уровень самооценки")
+    p2 = Paragraph(b[1], my_Style)
+    p2.wrapOn(pdf, 450, 500)
+    p2.drawOn(pdf, x=80, y=500)
+
+    pdf.drawString(x=70, y=450, text="Разница")
+    p3 = Paragraph(b[2], my_Style)
+    p3.wrapOn(pdf, 450, 350)
+    p3.drawOn(pdf, x=80, y=350)
+    pdf.showPage()
+
+    pdf.setFont("TNR", 14)
+    pdf.drawString(x=70, y=780, text="Темперамент")
+    p1 = Paragraph(b[3], my_Style)
+    p1.wrapOn(pdf, 450, 100)
+    p1.drawOn(pdf, x=80, y=100)
+
+    pdf.setFont("TNR", 14)
+    pdf.drawString(x=70, y=600, text="Нейротизм")
+    p1 = Paragraph(b[4], my_Style)
+    p1.wrapOn(pdf, 450, 400)
+    p1.drawOn(pdf, x=80, y=400)
+
+    chart1 = bar1(results[2], results[0], results[1])
+    chart2 = temperament_circle1(results[0], results[1])
+    pdf.setFont("TNR", 14)
+    pdf.drawString(x=70, y=300, text="Шкала искренности")
+    p1 = Paragraph(b[5], my_Style)
+    p1.wrapOn(pdf, 450, 300)
+    p1.drawOn(pdf, x=80, y=300)
+    pdf.drawImage(chart2, x=70, y=600, width=200, height=200, preserveAspectRatio=True, mask='auto')
+    pdf.drawImage(chart1, x=300, y=580, width=250, height=250, preserveAspectRatio=True, mask='auto')
+
+    chart3 = bar2(results[4], results[5], results[6])
+    pdf.showPage()
+    pdf.setFont("TNR", 14)
+    pdf.drawString(x=70, y=750, text="Оценка потребности в достижении успеха")
+    p1 = Paragraph(b[6], my_Style)
+    p1.wrapOn(pdf, 450, 700)
+    p1.drawOn(pdf, x=80, y=700)
+    pdf.drawString(x=70, y=650, text="Уровень креативности")
+    p1 = Paragraph(b[7], my_Style)
+    p1.wrapOn(pdf, 450, 600)
+    p1.drawOn(pdf, x=80, y=600)
+    pdf.drawImage(chart3, x=150, y=300, width=300, height=300, preserveAspectRatio=True, mask='auto')
+    text = "0-20 баллов - низкие значения <br/>" \
+           "21-49 баллов - средние значения <br/>" \
+           "50-67 баллов - высокие значения <br/>"
+    self = "Направленность на себя связывается с преобладанием мотивов собственного благополучия, стремления к личному" \
+           " первенству, престижу. Такой человек чаще всего бывает занят самим собой, своими чувствами и переживаниями и" \
+           " мало реагирует на потребности людей вокруг себя. В работе видит прежде всего возможность удовлетворить свои" \
+           " притязания и амбиции. Характерна агрессивность в достижении статуса, властность, склонность к соперничеству," \
+           " раздражительность, тревожность.<br/><br/>" \
+           "Направленность на взаимодействие имеет место тогда, когда поступки человека определяются потребностью в" \
+           " общении, стремлением поддерживать хорошие отношения с товарищами по работе. Такой человек проявляет" \
+           " интерес к совместной деятельности, иногда в ущерб выполнению своих должностных обязанностей. Характерно" \
+           " оказание искренней помощи людям, ориентация на социальное одобрение, зависимость от группы, потребность" \
+           " в привязанности и эмоциональных отношениях.<br/><br/>" \
+           "Направленность на задачу отражает преобладание мотивов, порождаемых самой деятельностью, увлечение" \
+           " процессом деятельности, бескорыстное стремление к познанию, овладению новыми умениями и навыками." \
+           " Характерна заинтересованность в решении деловых проблем, выполнение работы как можно лучше, стремление" \
+           " добивается наибольшей продуктивности группы, ориентация на деловое сотрудничество, способность отстаивать" \
+           " в интересах дела точку зрения, которую считает полезной для выполнения поставленной задачи."
+    p2 = Paragraph(text, my_Style)
+    p2.wrapOn(pdf, 450, 300)
+    p2.drawOn(pdf, x=80, y=300)
+    p3 = Paragraph(self, my_Style)
+    p3.wrapOn(pdf, 450, 50)
+    p3.drawOn(pdf, x=80, y=50)
+    pdf.save()
+    buffer.seek(0)
+    return FileResponse(buffer, as_attachment=True, filename='hello.pdf')

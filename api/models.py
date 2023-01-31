@@ -43,9 +43,9 @@ class Teacher(models.Model):
 
 class Pupil(models.Model):
     user = models.OneToOneField(User, null=True, blank=True, on_delete=models.CASCADE)
-    fio = models.CharField(max_length=200, null=True)
-    phone = models.CharField(max_length=200, null=True)
-    email = models.CharField(max_length=200, null=True)
+    fio = models.CharField(max_length=200, null=False)
+    phone = models.CharField(max_length=200, null=False)
+    email = models.CharField(max_length=200, null=False, unique=True)
     profile_pic = models.ImageField(default="profile2.png", null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True, null=True)
     classroom = models.ForeignKey(Classroom, null=True, on_delete=models.CASCADE)
