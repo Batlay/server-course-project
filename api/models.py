@@ -2,17 +2,6 @@ from django.contrib.auth.models import User
 from django.db import models
 
 
-# Create your models here.
-
-class Note(models.Model):
-    body = models.TextField(null=True, blank=True)
-    updated = models.DateTimeField(auto_now=True)
-    created = models.DateTimeField(auto_now_add=True)
-
-    def __str__(self):
-        return self.body[0:50]
-
-
 class School(models.Model):
     name = models.CharField(max_length=200, null=True)
 
@@ -25,7 +14,9 @@ class Classroom(models.Model):
     school = models.ForeignKey(School, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.name + " - " + self.school.name
+        if self.school == None:
+            return "ERROR-PUPIL NAME IS NULL"
+        return str(self.id) + self.name + " - " + self.school.name
 
 
 class Teacher(models.Model):
@@ -66,7 +57,7 @@ class Post(models.Model):
     author = models.ForeignKey(User, null=True, on_delete=models.SET_NULL)
     created_on = models.DateTimeField(auto_now_add=True, null=True)
     content = models.TextField()
-    slug = models.SlugField(max_length=200, unique=True)
+    slug = models.SlugField(max_length=200)
     pupil = models.ForeignKey(Pupil, null=True, blank=True, on_delete=models.CASCADE)
     result = models.CharField(choices=RESULTS, max_length=100, default='Хорошие показатели')
 

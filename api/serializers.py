@@ -1,14 +1,7 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
+
 from .models import *
-from django.contrib.auth.models import User
-from drf_extra_fields.fields import Base64ImageField
-
-
-class NoteSerializer(ModelSerializer):
-    class Meta:
-        model = Note
-        fields = '__all__'
 
 
 class PostSerializer(ModelSerializer):
@@ -24,6 +17,18 @@ class PostSerializer(ModelSerializer):
 class PupilSerializer(ModelSerializer):
     class Meta:
         model = Pupil
+        fields = '__all__'
+
+
+class SchoolSerializer(ModelSerializer):
+    class Meta:
+        model = School
+        fields = '__all__'
+
+
+class ClassroomSerializer(ModelSerializer):
+    class Meta:
+        model = Classroom
         fields = '__all__'
 
 
