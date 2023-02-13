@@ -16,7 +16,7 @@ class Classroom(models.Model):
     def __str__(self):
         if self.school == None:
             return "ERROR-PUPIL NAME IS NULL"
-        return str(self.id) + self.name + " - " + self.school.name
+        return str(self.id) + " " + self.name + " - " + self.school.name
 
 
 class Teacher(models.Model):
@@ -29,7 +29,7 @@ class Teacher(models.Model):
     classroom = models.ForeignKey(Classroom, null=True, on_delete=models.CASCADE)
 
     def __str__(self):
-        return self.fio + " " + self.classroom.name + " " + self.classroom.school.name
+        return self.fio + " " + self.classroom.name + " " + self.classroom.school.name + " " + str(self.user.id)
 
 
 class Pupil(models.Model):
