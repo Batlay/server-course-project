@@ -1,1 +1,3 @@
-web: gunicorn newway.wsgi --log-file
+web: gunicorn newway.wsgi:application --log-file - --log-level debug
+python manage.py collectstatic --noinput
+manage.py migrate
