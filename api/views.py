@@ -1,7 +1,8 @@
 import base64
 import io
 from datetime import datetime
-
+import reportlab.rl_config
+import reportlab
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User, Group
 from django.core.files.base import ContentFile
@@ -19,7 +20,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-
+from django.templatetags.static import static
 from .models import Post, Teacher, Pupil, Test_Info, ActivityTest, MotivationTest, TemperamentTest, Overall, \
     Criteria, PupilResult, InfoResult, School, Classroom
 from .report import make_radar_chart, bar2, make_radar_chart1, pdf_report, bar1, temperament_circle1, bar
@@ -939,7 +940,9 @@ def getPdf(request, pk):
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = 'inline;'
         pdf = canvas.Canvas(buffer, pagesize=A4)
-        pdfmetrics.registerFont(TTFont('TNR', 'times.ttf'))
+        url='https://newway.herokuapp.com/static/fonts/times.ttf'
+        #pdfmetrics.registerFont(TTFont('TNR', 'C:/Users/Gleb/Documents/newway/static/fonts/times.ttf'))
+        pdfmetrics.registerFont(TTFont('TNR', url))
         pdf.setFont("TNR", 14)
         my_Style = ParagraphStyle('style1',
                                   style='style1', alignment=TA_JUSTIFY,
@@ -959,8 +962,8 @@ def getPdf(request, pk):
                                   )
         my_Style1 = ParagraphStyle('style1',
                                    style='style1', alignment=0,
-                                   fontName='TNR',
                                    backColor=None,
+                                   fontName='TNR',
                                    borderColor=None,
                                    borderPadding=0,
                                    borderRadius=None,
@@ -983,8 +986,8 @@ def getPdf(request, pk):
         w, h = p.wrap(450, 700)
         p.drawOn(pdf, x=80, y=530 - h)
         pdf.showPage()
-        pdf.setFont("TNR", 14)
 
+        pdf.setFont("TNR", 14)
         pdf.drawString(x=385, y=800, text="Рефлексивный критерий")
         pdf.line(70, 795, 530, 795)
 
