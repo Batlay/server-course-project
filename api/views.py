@@ -1,34 +1,24 @@
 import base64
 import io
-import json
-import time
+from datetime import datetime
 
-from reportlab.lib import styles
-from reportlab.lib.colors import Color
-from reportlab.lib.enums import TA_JUSTIFY
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Image
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-
-from fpdf import FPDF
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.models import User, Group
 from django.core.files.base import ContentFile
 from django.core.mail import send_mail
 from django.http import HttpResponse, FileResponse, JsonResponse
-from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.colors import Color
+from reportlab.lib.enums import TA_JUSTIFY
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
-from reportlab.platypus import Paragraph, Spacer, Image
+from reportlab.platypus import Paragraph
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.generics import get_object_or_404
 from rest_framework.response import Response
-from datetime import datetime
 
 from .models import Post, Teacher, Pupil, Test_Info, ActivityTest, MotivationTest, TemperamentTest, Overall, \
     Criteria, PupilResult, InfoResult, School, Classroom
@@ -107,10 +97,10 @@ def getRoutes(request):
             'description': 'Returns result pupil'
         },
         {
-            'Endpoint': '/result/id',
-            'method': 'GET',
-            'body': None,
-            'description': 'Returns result pupil'
+            'Endpoint': '/pupils/form/results/',
+            'method': 'POST',
+            'body': {'id': ''},
+            'description': 'Returns form result pupil'
         },
         {
             'Endpoint': '/notes/person/id/',
@@ -125,7 +115,7 @@ def getRoutes(request):
             'description': 'Tests Info'
         },
         {
-            'Endpoint': '/results/',
+            'Endpoint': '/tests/results/',
             'method': 'POST',
             'body': {'id': ''},
             'description': 'Results Info'
@@ -226,140 +216,9 @@ def getRoutes(request):
             'body': {'id': ""},
             'description': 'Classroom Info'
         },
-        {
-            'Endpoint': '/schools/delete/id',
-            'method': 'DELETE',
-            'body': {'id': ""},
-            'description': 'Delete school'
-        },
-        {
-            'Endpoint': '/schools/create/',
-            'method': 'POST',
-            'body': {'name': ""},
-            'description': 'Create school'
-        },
-        {
-            'Endpoint': '/schools/edit/id',
-            'method': 'PUT',
-            'body': {'name': ""},
-            'description': 'Edit school'
-        },
-        {
-            'Endpoint': '/classrooms/delete/id',
-            'method': 'DELETE',
-            'body': {'id': ""},
-            'description': 'Delete classroom'
-        },
-        {
-            'Endpoint': '/classrooms/create/id',
-            'method': 'POST',
-            'body': {'name': ""},
-            'description': 'Create classroom'
-        },
-        {
-            'Endpoint': '/classrooms/edit/id',
-            'method': 'PUT',
-            'body': {'name': ""},
-            'description': 'Edit classroom'
-        },
     ]
 
     return Response(routes)
-
-
-@api_view(['PUT'])
-def editClassroom(request, pk):
-    data = request.data
-    ids = pk.split('&')
-    id_school = ids[0]
-    id_classroom = ids[1]
-    school = School.objects.get(id=id_school)
-    if Classroom.objects.filter(school=school, name=data['name']).exists():
-        content = {'Error': 'Такой класс уже существует'}
-        return Response(content, status=status.HTTP_409_CONFLICT)
-    elif data['name'] in [None, '']:
-        content = {'Error': 'Заполните все поля'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        classroom = Classroom.objects.get(id=id_classroom, school=school)
-        classroom.name = data['name']
-        classroom.save()
-        return JsonResponse({'message': 'Classroom was edited successfully!'})
-
-
-@api_view(['DELETE'])
-def deleteClassroom(request, pk):
-    ids = pk.split('&')
-    id_school = ids[0]
-    id_classroom = ids[1]
-    school = School.objects.get(id=id_school)
-    try:
-        Classroom.objects.get(id=id_classroom, school=school).delete()
-        return JsonResponse({'message': 'Classroom was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
-    except Classroom.DoesNotExist:
-        content = {'Error': 'Нет такого класса'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['POST'])
-def createClassroom(request, pk):
-    data = request.data
-    school = School.objects.get(id=pk)
-    if Classroom.objects.filter(school=school, name=data['name']).exists():
-        content = {'Error': 'Такой класс уже существует'}
-        return Response(content, status=status.HTTP_409_CONFLICT)
-    elif data['name'] in [None, '']:
-        content = {'Error': 'Заполните все поля'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        classroom = Classroom.objects.create(
-            name=data['name'], school=school
-        )
-        serializer = ClassroomSerializer(classroom, many=False)
-        return Response(serializer.data)
-
-
-@api_view(['PUT'])
-def editSchool(request, pk):
-    data = request.data
-    if School.objects.filter(name=data['name']).exists():
-        content = {'Error': 'Такая школа уже существует'}
-        return Response(content, status=status.HTTP_409_CONFLICT)
-    elif data['name'] in [None, '']:
-        content = {'Error': 'Заполните все поля'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        school = School.objects.get(id=pk)
-        school.name = data['name']
-        school.save()
-        return JsonResponse({'message': 'School was edited successfully!'})
-
-
-@api_view(['DELETE'])
-def deleteSchool(request, pk):
-    try:
-        School.objects.get(id=pk).delete()
-        return JsonResponse({'message': 'School was deleted successfully!'}, status=status.HTTP_204_NO_CONTENT)
-    except School.DoesNotExist:
-        content = {'Error': 'Нет такой школы'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['POST'])
-def createSchool(request):
-    data = request.data
-    if School.objects.filter(name=data['name']).exists():
-        content = {'Error': 'Такая школа уже существует'}
-        return Response(content, status=status.HTTP_409_CONFLICT)
-    elif data['name'] in [None, '']:
-        content = {'Error': 'Заполните все поля'}
-        return Response(content, status=status.HTTP_400_BAD_REQUEST)
-    else:
-        school = School.objects.create(
-            name=data['name'],
-        )
-        serializer = SchoolSerializer(school, many=False)
-        return Response(serializer.data)
 
 
 @api_view(['POST'])
@@ -398,13 +257,11 @@ def getNote(request, pk):
         if date_field == pk:
             note = i
     serializer = PostSerializer(note, many=False)
-    print(serializer.data)
     return Response(serializer.data)
 
 
 @api_view(['GET'])
 def getPupilNote(request, pk):
-    print(pk)
     pupil = Pupil.objects.get(id=pk)
     notes = Post.objects.filter(pupil=pupil)
     serializer = PostSerializer(notes, many=True)
@@ -439,8 +296,6 @@ def loginPage(request):
     username = data['username']
     password = data['password']
 
-    print(request.data, username, password)
-
     user = authenticate(request, username=username, password=password)
 
     if user is not None:
@@ -455,9 +310,8 @@ def loginPage(request):
 @api_view(['POST'])
 def ResetPassword(request):
     data = request.data
-    print(data)
     email = data['email']
-    print(email)
+
     verify = User.objects.filter(email=email).first()
     if verify:
         link = f"http://localhost:3000/user-change-password/{verify.id}"
@@ -575,11 +429,12 @@ def getPupilChart(request, pk):
                 task = PupilResult.objects.get(pupil=pupil, result_name_id=6).result
                 interaction = PupilResult.objects.get(pupil=pupil, result_name_id=7).result
             except PupilResult.DoesNotExist:
-                print('')
+                content = {'Error': 'Результаты не найдены'}
+                return Response(content)
         chart = bar(self, interaction, task)
         return Response(chart)
     except Pupil.DoesNotExist:
-        content = {'Error': 'No such Pupil'}
+        content = {'Error': 'Нет такого ученика'}
         return Response(content)
 
 
@@ -587,7 +442,7 @@ def getPupilChart(request, pk):
 def getPupilResult(request, pk):
     try:
         pupil = Pupil.objects.get(id=pk)
-        # result = PupilResult.objects.filter(pupil=pupil).order_by('result_name_id')
+
         a = []
         for i in range(1, 12):
             try:
@@ -595,8 +450,6 @@ def getPupilResult(request, pk):
             except PupilResult.DoesNotExist:
                 result = 0
             a.append(result)
-        # serializer = ResultSerializer(result, many=True)
-
         return Response(a)
     except Pupil.DoesNotExist:
         return Response()
@@ -649,16 +502,14 @@ def getTests(request):
 
 
 @api_view(['POST'])
-def getResults(request):
+def getTestResults(request):
     array = ['Рефлексивный', 'Когнитивно-эмоциональный', 'Мотивационно-ценностный', 'Деятельностно-процессуальный']
 
     data = request.data
     id_user = data['id']
     current_user = User.objects.get(id=id_user)
     pupil = get_object_or_404(Pupil, user=current_user)
-    print(pupil)
     overall = Overall.objects.filter(pupil=pupil)
-    print(overall)
     results = []
     index = 0
     for i in array:
@@ -668,20 +519,27 @@ def getResults(request):
         if len(results) == index:
             results.append(0)
         index += 1
-    print(results)
 
     return Response(results)
 
 
-@api_view(['GET'])
-def getResult(request, pk):
-    pupil = get_object_or_404(Pupil, id=pk)
+@api_view(['POST'])
+def getFormResults(request):
+    data = request.data
+    id_user = data['id']
+    current_user = User.objects.get(id=id_user)
+    teacher_details = get_object_or_404(Teacher, user=current_user)
+    classroom = teacher_details.classroom
+    pupils = Pupil.objects.filter(classroom=classroom).order_by('fio')
+    results = []
+    for pupil in pupils:
+        try:
+            overall = Overall.objects.get(pupil=pupil, criteria_id=2)
+            results.append(overall.result)
+        except Overall.DoesNotExist:
+            results.append(0)
 
-    try:
-        overall = Overall.objects.get(pupil=pupil, criteria_id=2)
-        return Response(overall.result)
-    except Overall.DoesNotExist:
-        return Response(0)
+    return Response(results)
 
 
 @api_view(['GET'])
@@ -700,7 +558,7 @@ def Test4Answers(request):
 
     mark = 0
     score = 0
-    print(data)
+
     for i in test:
         if str(i.id) in data['answers']:
             if (data['answers'][str(i.id)] == "Да" and i.yes) or (data['answers'][str(i.id)] == "Нет" and i.no):
@@ -717,9 +575,6 @@ def Test4Answers(request):
     elif 0 <= mark <= 6:
         score += 1
 
-    print(mark)
-    print(score)
-
     res = InfoResult.objects.get(id=8)
 
     userdata = data['userdata']['id']
@@ -730,7 +585,8 @@ def Test4Answers(request):
     check_object1 = PupilResult.objects.filter(pupil=pupil_details, result_name=res)
 
     if check_object or check_object1:
-        print('Ошибка')
+        content = {'Error': 'Результаты уже были сохранены'}
+        return Response(content)
     else:
         result = PupilResult(pupil=pupil_details, result_name=res, result=mark)
         result.save()
@@ -751,7 +607,6 @@ def getTest3(request):
 @api_view(['POST'])
 def Test3Answers(request):
     data = request.data
-    test = MotivationTest.objects.all()
     criteria = Criteria.objects.get(id=3)
 
     key1 = "1А 2Б 3А 4А 5Б 6В 7А 8В 9В 10В 11Б 12Б 13В 14В 15А " \
@@ -775,12 +630,10 @@ def Test3Answers(request):
         answer = data1[str(i + 1)]
         answers += answer + " "
 
-    print(answers)
     for i in range(len(data2)):
         answer1 = data2[str(i + 1)]
         answers1 += answer1 + " "
 
-    print(answers1)
     # Запись ответов по категориям
 
     k1 = key1.split()
@@ -791,7 +644,6 @@ def Test3Answers(request):
 
     for i in y:
         for j in k1:
-            print(i, " ", j)
             if i == j:
                 section1 += 1
     for i in y1:
@@ -814,10 +666,6 @@ def Test3Answers(request):
         for j in k3:
             if i == j:
                 section3 -= 1
-
-    print(section1)
-    print(section2)
-    print(section3)
 
     section1 += 30
     section2 += 30
@@ -843,7 +691,8 @@ def Test3Answers(request):
     check_object3 = PupilResult.objects.filter(pupil=pupil_details, result_name=task)
 
     if check_object or check_object1 or check_object2 or check_object3:
-        print('Ошибка')
+        content = {'Error': 'Результаты уже были сохранены'}
+        return Response(content)
     else:
         result1 = PupilResult(pupil=pupil_details, result_name=self, result=section1)
         result2 = PupilResult(pupil=pupil_details, result_name=interaction, result=section2)
@@ -886,7 +735,6 @@ def Test2Answers(request):
                     mark2 += 1
                 elif i.type == "Шкала лжи" and i.key:
                     mark3 += 1
-    print(data)
 
     if 10 <= mark1 <= 14:
         score += 2
@@ -901,9 +749,6 @@ def Test2Answers(request):
     if mark3 <= 4:
         score += 1
 
-    print(mark1, mark2, mark3)
-    print(score)
-
     intr = InfoResult.objects.get(id=1)
     neur = InfoResult.objects.get(id=2)
     lie = InfoResult.objects.get(id=3)
@@ -917,7 +762,8 @@ def Test2Answers(request):
     check_object2 = PupilResult.objects.filter(pupil=pupil_details, result_name=neur)
     check_object3 = PupilResult.objects.filter(pupil=pupil_details, result_name=lie)
     if check_object or check_object1 or check_object2 or check_object3:
-        print('Ошибка')
+        content = {'Error': 'Результаты уже были сохранены'}
+        return Response(content)
     else:
         result1 = PupilResult(pupil=pupil_details, result_name=intr, result=mark1)
         result2 = PupilResult(pupil=pupil_details, result_name=neur, result=mark2)
@@ -944,7 +790,6 @@ def getForm(request, pk):
         answer = data[str(i + 1)]
         sum += int(answer)
 
-    print(sum)
     if 34 <= sum <= 40:
         score = 5
     elif 27 <= sum <= 33:
@@ -961,7 +806,8 @@ def getForm(request, pk):
     check_object = Overall.objects.filter(pupil=pupil_details, criteria=criteria)
     check_object1 = PupilResult.objects.filter(pupil=pupil_details, result_name=result_name)
     if check_object or check_object1:
-        return Response('Ошибка')
+        content = {'Error': 'Результаты уже были сохранены'}
+        return Response(content)
     else:
         result = PupilResult(pupil=pupil_details, result_name=result_name, result=sum)
         result.save()
@@ -974,30 +820,26 @@ def getForm(request, pk):
 @api_view(['POST'])
 def Test1Answers(request):
     data = request.data
-    print(data)
+
     criteria = Criteria.objects.get(id=5)
     self_esteem = 0
     expectations = 0
     score = 0
+
     area1 = data['answers'][0:6]
-    print(area1)
     area2 = data['answers'][6:12]
-    print(area2)
+
     for i in area1:
         self_esteem += int(i)
     for i in area2:
         expectations += int(i)
     self_esteem /= 6
     expectations /= 6
-    print(self_esteem)
-    print(expectations)
 
     if self_esteem > expectations:
         diff = round(self_esteem, 0) - round(expectations, 0)
     else:
         diff = round(expectations, 0) - round(self_esteem, 0)
-    print(diff)
-    print(score)
 
     if 60 <= expectations <= 90:
         score += 2
@@ -1116,21 +958,21 @@ def getPdf(request, pk):
                                   firstLineIndent=15
                                   )
         my_Style1 = ParagraphStyle('style1',
-                                  style='style1', alignment=0,
-                                  fontName='TNR',
-                                  backColor=None,
-                                  borderColor=None,
-                                  borderPadding=0,
-                                  borderRadius=None,
-                                  borderWidth=0,
-                                  endDots=None,
-                                  fontSize=12,
-                                  textColor=Color(0, 0, 0, 1),
-                                  wordWrap=None,
-                                  leading=11,
-                                  spaceAfter=5,
-                                  firstLineIndent=0
-                                  )
+                                   style='style1', alignment=0,
+                                   fontName='TNR',
+                                   backColor=None,
+                                   borderColor=None,
+                                   borderPadding=0,
+                                   borderRadius=None,
+                                   borderWidth=0,
+                                   endDots=None,
+                                   fontSize=12,
+                                   textColor=Color(0, 0, 0, 1),
+                                   wordWrap=None,
+                                   leading=11,
+                                   spaceAfter=5,
+                                   firstLineIndent=0
+                                   )
         pdf.setTitle(pupil.fio + " | Оценка творческих способностей")
         pdf.drawImage(pupil.profile_pic.path, x=70, y=600, width=200, height=200, preserveAspectRatio=True, mask='auto')
         pdf.drawImage(chart, x=300, y=580, width=250, height=250, preserveAspectRatio=True, mask='auto')
@@ -1141,15 +983,6 @@ def getPdf(request, pk):
         w, h = p.wrap(450, 700)
         p.drawOn(pdf, x=80, y=530 - h)
         pdf.showPage()
-        score = 0
-        # for i in results:
-        #     if i == 0:
-        #         score += 1
-        # if score >= 1:
-        #     pdf.setFont("TNR", 14)
-        #     pdf.drawString(x=40, y=780, text="Для получения аналитической статистики необходимо получить все результаты тестов!")
-        #     pdf.save()
-        # else:
         pdf.setFont("TNR", 14)
 
         pdf.drawString(x=385, y=800, text="Рефлексивный критерий")
@@ -1199,7 +1032,8 @@ def getPdf(request, pk):
         pdf.showPage()
 
         pdf.setFont("TNR", 14)
-        pdf.drawString(x=35, y=800, text="Деятельностно-процессуальный / Личностно-креативный / Мотивационно-ценностный")
+        pdf.drawString(x=35, y=800,
+                       text="Деятельностно-процессуальный / Личностно-креативный / Мотивационно-ценностный")
         pdf.line(70, 795, 530, 795)
         pdf.drawString(x=70, y=750, text="Потребность в достижении успеха (" + str(results[7]) + "). ")
         p1 = Paragraph(b[6], my_Style)
