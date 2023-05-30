@@ -977,7 +977,7 @@ def getPdf(request, pk):
                                    firstLineIndent=0
                                    )
         pdf.setTitle(pupil.fio + " | Оценка творческих способностей")
-        pdf.drawImage('https://newway.herokuapp.com/static' + pupil.profile_pic.url, x=70, y=600, width=200, height=200, preserveAspectRatio=True, mask='auto')
+        pdf.drawImage(pupil.profile_pic.url, x=70, y=600, width=200, height=200, preserveAspectRatio=True, mask='auto')
         pdf.drawImage(chart, x=300, y=580, width=250, height=250, preserveAspectRatio=True, mask='auto')
         pdf.drawString(x=180, y=555, text=pupil.classroom.name)
         pdf.drawString(x=70, y=555, text=pupil.classroom.school.name)
