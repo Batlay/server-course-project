@@ -941,7 +941,7 @@ def getPdf(request, pk):
         response['Content-Disposition'] = 'inline;'
         pdf = canvas.Canvas(buffer, pagesize=A4)
         url='https://newway.herokuapp.com/static/fonts/times.ttf'
-        #pdfmetrics.registerFont(TTFont('TNR', 'C:/Users/Gleb/Documents/newway/static/fonts/times.ttf'))
+        # pdfmetrics.registerFont(TTFont('TNR', 'C:/Users/Gleb/Documents/newway/static/fonts/times.ttf'))
         pdfmetrics.registerFont(TTFont('TNR', url))
         pdf.setFont("TNR", 14)
         my_Style = ParagraphStyle('style1',
@@ -977,7 +977,8 @@ def getPdf(request, pk):
                                    firstLineIndent=0
                                    )
         pdf.setTitle(pupil.fio + " | Оценка творческих способностей")
-        pdf.drawImage(pupil.profile_pic.url, x=70, y=600, width=200, height=200, preserveAspectRatio=True, mask='auto')
+        pdf.drawImage('https://newway.herokuapp.com/static' + pupil.profile_pic.url, x=70, y=600, width=200, height=200,
+                      preserveAspectRatio=True, mask='auto')
         pdf.drawImage(chart, x=300, y=580, width=250, height=250, preserveAspectRatio=True, mask='auto')
         pdf.drawString(x=180, y=555, text=pupil.classroom.name)
         pdf.drawString(x=70, y=555, text=pupil.classroom.school.name)
