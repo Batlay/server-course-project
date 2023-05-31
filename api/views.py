@@ -987,98 +987,108 @@ def getPdf(request, pk):
         w, h = p.wrap(450, 700)
         p.drawOn(pdf, x=80, y=530 - h)
         pdf.showPage()
+        score = 0
+        for i in overall_results:
+            if i == 0:
+                score += 1
+        if score >= 1:
+            pdf.setFont("TNR", 14)
+            pdf.drawString(x=40, y=780,
+                           text="Для получения аналитической статистики необходимо получить все результаты тестов!")
+            pdf.save()
+            buffer.seek(0)
+        else:
+            pdf.setFont("TNR", 14)
+            pdf.drawString(x=385, y=800, text="Рефлексивный критерий")
+            pdf.line(70, 795, 530, 795)
 
-        pdf.setFont("TNR", 14)
-        pdf.drawString(x=385, y=800, text="Рефлексивный критерий")
-        pdf.line(70, 795, 530, 795)
+            pdf.drawString(x=70, y=750, text="Уровень самооценки (" + str(results[8]) + ")")
+            p1 = Paragraph(b[0], my_Style)
+            w, h = p1.wrap(200, 400)
+            p1.drawOn(pdf, x=70, y=730 - h)
 
-        pdf.drawString(x=70, y=750, text="Уровень самооценки (" + str(results[8]) + ")")
-        p1 = Paragraph(b[0], my_Style)
-        w, h = p1.wrap(200, 400)
-        p1.drawOn(pdf, x=70, y=730 - h)
+            pdf.drawString(x=320, y=750, text="Уровень притязаний (" + str(results[9]) + ")")
+            p2 = Paragraph(b[1], my_Style)
+            w, h = p2.wrap(200, 400)
+            p2.drawOn(pdf, x=320, y=730 - h)
 
-        pdf.drawString(x=320, y=750, text="Уровень притязаний (" + str(results[9]) + ")")
-        p2 = Paragraph(b[1], my_Style)
-        w, h = p2.wrap(200, 400)
-        p2.drawOn(pdf, x=320, y=730 - h)
+            pdf.drawString(x=70, y=410, text="Разница (" + str(results[10]) + ")")
+            p3 = Paragraph(b[2], my_Style)
+            w, h = p3.wrap(200, 400)
+            p3.drawOn(pdf, x=70, y=390 - h)
+            pdf.showPage()
 
-        pdf.drawString(x=70, y=410, text="Разница (" + str(results[10]) + ")")
-        p3 = Paragraph(b[2], my_Style)
-        w, h = p3.wrap(200, 400)
-        p3.drawOn(pdf, x=70, y=390 - h)
-        pdf.showPage()
+            pdf.setFont("TNR", 14)
+            pdf.drawString(x=300, y=800, text="Когнитивно-эмоциональный критерий")
+            pdf.line(70, 795, 530, 795)
 
-        pdf.setFont("TNR", 14)
-        pdf.drawString(x=300, y=800, text="Когнитивно-эмоциональный критерий")
-        pdf.line(70, 795, 530, 795)
+            pdf.drawString(x=70, y=560, text="Темперамент")
+            p1 = Paragraph(b[3], my_Style)
+            w, h = p1.wrap(200, 400)
+            p1.drawOn(pdf, x=70, y=540 - h)
 
-        pdf.drawString(x=70, y=560, text="Темперамент")
-        p1 = Paragraph(b[3], my_Style)
-        w, h = p1.wrap(200, 400)
-        p1.drawOn(pdf, x=70, y=540 - h)
+            pdf.setFont("TNR", 14)
+            pdf.drawString(x=320, y=560, text="Нейротизм")
+            p1 = Paragraph(b[4], my_Style)
+            w, h = p1.wrap(200, 400)
+            p1.drawOn(pdf, x=320, y=540 - h)
 
-        pdf.setFont("TNR", 14)
-        pdf.drawString(x=320, y=560, text="Нейротизм")
-        p1 = Paragraph(b[4], my_Style)
-        w, h = p1.wrap(200, 400)
-        p1.drawOn(pdf, x=320, y=540 - h)
+            pdf.setFont("TNR", 14)
+            pdf.drawString(x=70, y=210, text="Шкала искренности")
+            p1 = Paragraph(b[5], my_Style)
+            w, h = p1.wrap(200, 400)
+            p1.drawOn(pdf, x=70, y=190 - h)
 
-        pdf.setFont("TNR", 14)
-        pdf.drawString(x=70, y=210, text="Шкала искренности")
-        p1 = Paragraph(b[5], my_Style)
-        w, h = p1.wrap(200, 400)
-        p1.drawOn(pdf, x=70, y=190 - h)
+            chart1 = bar1(results[2], results[0], results[1])
+            chart2 = temperament_circle1(results[0], results[1])
+            pdf.drawImage(chart1, x=300, y=550, width=250, height=250, preserveAspectRatio=True, mask='auto')
+            pdf.drawImage(chart2, x=70, y=550, width=200, height=280, preserveAspectRatio=True, mask='auto')
+            pdf.showPage()
 
-        chart1 = bar1(results[2], results[0], results[1])
-        chart2 = temperament_circle1(results[0], results[1])
-        pdf.drawImage(chart1, x=300, y=550, width=250, height=250, preserveAspectRatio=True, mask='auto')
-        pdf.drawImage(chart2, x=70, y=550, width=200, height=280, preserveAspectRatio=True, mask='auto')
-        pdf.showPage()
+            pdf.setFont("TNR", 14)
+            pdf.drawString(x=35, y=800,
+                           text="Деятельностно-процессуальный / Личностно-креативный / Мотивационно-ценностный")
+            pdf.line(70, 795, 530, 795)
+            pdf.drawString(x=70, y=750, text="Потребность в достижении успеха (" + str(results[7]) + "). ")
+            p1 = Paragraph(b[6], my_Style)
+            w, h = p1.wrap(200, 400)
+            p1.drawOn(pdf, x=70, y=730 - h)
 
-        pdf.setFont("TNR", 14)
-        pdf.drawString(x=35, y=800,
-                       text="Деятельностно-процессуальный / Личностно-креативный / Мотивационно-ценностный")
-        pdf.line(70, 795, 530, 795)
-        pdf.drawString(x=70, y=750, text="Потребность в достижении успеха (" + str(results[7]) + "). ")
-        p1 = Paragraph(b[6], my_Style)
-        w, h = p1.wrap(200, 400)
-        p1.drawOn(pdf, x=70, y=730 - h)
+            pdf.drawString(x=320, y=750, text="Уровень креативности (" + str(results[3]) + ").")
+            p1 = Paragraph(b[7], my_Style)
+            w, h = p1.wrap(200, 400)
+            p1.drawOn(pdf, x=320, y=730 - h)
 
-        pdf.drawString(x=320, y=750, text="Уровень креативности (" + str(results[3]) + ").")
-        p1 = Paragraph(b[7], my_Style)
-        w, h = p1.wrap(200, 400)
-        p1.drawOn(pdf, x=320, y=730 - h)
+            pdf.drawString(x=70, y=400, text="Определение направленности")
+            text = "0-20 баллов - низкие значения <br/>" \
+                   "21-49 баллов - средние значения <br/>" \
+                   "50-67 баллов - высокие значения <br/>"
+            self = "Направленность на себя связывается с преобладанием мотивов собственного благополучия, стремления к личному" \
+                   " первенству, престижу. Такой человек чаще всего бывает занят самим собой, своими чувствами и переживаниями и" \
+                   " мало реагирует на потребности людей вокруг себя. В работе видит прежде всего возможность удовлетворить свои" \
+                   " притязания и амбиции. Характерна агрессивность в достижении статуса, властность, склонность к соперничеству," \
+                   " раздражительность, тревожность.<br/><br/>" \
+                   "Направленность на взаимодействие имеет место тогда, когда поступки человека определяются потребностью в" \
+                   " общении, стремлением поддерживать хорошие отношения с товарищами по работе. Такой человек проявляет" \
+                   " интерес к совместной деятельности, иногда в ущерб выполнению своих должностных обязанностей. Характерно" \
+                   " оказание искренней помощи людям, ориентация на социальное одобрение, зависимость от группы, потребность" \
+                   " в привязанности и эмоциональных отношениях.<br/><br/>" \
+                   "Направленность на задачу отражает преобладание мотивов, порождаемых самой деятельностью, увлечение" \
+                   " процессом деятельности, бескорыстное стремление к познанию, овладению новыми умениями и навыками." \
+                   " Характерна заинтересованность в решении деловых проблем, выполнение работы как можно лучше, стремление" \
+                   " добивается наибольшей продуктивности группы, ориентация на деловое сотрудничество, способность отстаивать" \
+                   " в интересах дела точку зрения, которую считает полезной для выполнения поставленной задачи."
+            p2 = Paragraph(text, my_Style1)
+            w, h = p2.wrap(452, 400)
+            p2.drawOn(pdf, x=70, y=380 - h)
+            p3 = Paragraph(self, my_Style)
+            w, h = p3.wrap(452, 400)
+            p3.drawOn(pdf, x=70, y=270 - h)
 
-        pdf.drawString(x=70, y=400, text="Определение направленности")
-        text = "0-20 баллов - низкие значения <br/>" \
-               "21-49 баллов - средние значения <br/>" \
-               "50-67 баллов - высокие значения <br/>"
-        self = "Направленность на себя связывается с преобладанием мотивов собственного благополучия, стремления к личному" \
-               " первенству, престижу. Такой человек чаще всего бывает занят самим собой, своими чувствами и переживаниями и" \
-               " мало реагирует на потребности людей вокруг себя. В работе видит прежде всего возможность удовлетворить свои" \
-               " притязания и амбиции. Характерна агрессивность в достижении статуса, властность, склонность к соперничеству," \
-               " раздражительность, тревожность.<br/><br/>" \
-               "Направленность на взаимодействие имеет место тогда, когда поступки человека определяются потребностью в" \
-               " общении, стремлением поддерживать хорошие отношения с товарищами по работе. Такой человек проявляет" \
-               " интерес к совместной деятельности, иногда в ущерб выполнению своих должностных обязанностей. Характерно" \
-               " оказание искренней помощи людям, ориентация на социальное одобрение, зависимость от группы, потребность" \
-               " в привязанности и эмоциональных отношениях.<br/><br/>" \
-               "Направленность на задачу отражает преобладание мотивов, порождаемых самой деятельностью, увлечение" \
-               " процессом деятельности, бескорыстное стремление к познанию, овладению новыми умениями и навыками." \
-               " Характерна заинтересованность в решении деловых проблем, выполнение работы как можно лучше, стремление" \
-               " добивается наибольшей продуктивности группы, ориентация на деловое сотрудничество, способность отстаивать" \
-               " в интересах дела точку зрения, которую считает полезной для выполнения поставленной задачи."
-        p2 = Paragraph(text, my_Style1)
-        w, h = p2.wrap(452, 400)
-        p2.drawOn(pdf, x=70, y=380 - h)
-        p3 = Paragraph(self, my_Style)
-        w, h = p3.wrap(452, 400)
-        p3.drawOn(pdf, x=70, y=270 - h)
-
-        chart3 = bar2(results[4], results[5], results[6])
-        pdf.drawImage(chart3, x=315, y=240, width=200, height=200, preserveAspectRatio=True, mask='auto')
-        pdf.save()
-        buffer.seek(0)
+            chart3 = bar2(results[4], results[5], results[6])
+            pdf.drawImage(chart3, x=315, y=240, width=200, height=200, preserveAspectRatio=True, mask='auto')
+            pdf.save()
+            buffer.seek(0)
         return FileResponse(buffer, as_attachment=True, filename='hello.pdf')
     except Pupil.DoesNotExist:
         content = {'Error': 'No such Pupil'}
